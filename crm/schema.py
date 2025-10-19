@@ -1,3 +1,5 @@
+# crm/schema.py
+
 import graphene
 from graphene_django import DjangoObjectType
 from .models import Customer, Product, Order
@@ -71,12 +73,13 @@ class CreateCustomer(graphene.Mutation):
             if not phone_pattern.match(input.phone):
                 raise Exception("Invalid phone format. Use formats like +1234567890 or 123-456-7890")
 
-        # Create customer
-        customer = Customer.objects.create(
+        # Create customer using save()
+        customer = Customer(
             name=input.name,
             email=input.email,
             phone=input.phone if input.phone else None
         )
+        customer.save()
 
         return CreateCustomer(customer=customer, message="Customer created successfully")
 
@@ -109,12 +112,13 @@ class BulkCreateCustomers(graphene.Mutation):
                     errors.append(f"Row {idx + 1}: Invalid phone format for {customer_input.email}")
                     continue
 
-                # Create customer
-                customer = Customer.objects.create(
+                # Create customer using save()
+                customer = Customer(
                     name=customer_input.name,
                     email=customer_input.email,
                     phone=customer_input.phone if customer_input.phone else None
                 )
+                customer.save()
                 customers.append(customer)
 
             except Exception as e:
@@ -139,12 +143,13 @@ class CreateProduct(graphene.Mutation):
         if stock < 0:
             raise Exception("Stock cannot be negative")
 
-        # Create product
-        product = Product.objects.create(
+        # Create product using save()
+        product = Product(
             name=input.name,
             price=input.price,
             stock=stock
         )
+        product.save()
 
         return CreateProduct(product=product)
 
@@ -178,12 +183,14 @@ class CreateOrder(graphene.Mutation):
             except Product.DoesNotExist:
                 raise Exception(f"Product with ID {product_id} does not exist")
 
-        # Create order
-        order = Order.objects.create(
+        # Create order using save()
+        order = Order(
             customer=customer,
-            total_amount=total_amount,
-            order_date=input.order_date if input.order_date else None
+            total_amount=total_amount
         )
+        if input.order_date:
+            order.order_date = input.order_date
+        order.save()
 
         # Associate products
         order.products.set(products)
