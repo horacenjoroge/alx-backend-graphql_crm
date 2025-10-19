@@ -2,7 +2,9 @@
 
 import graphene
 from graphene_django import DjangoObjectType
+from graphene_django.filter import DjangoFilterConnectionField
 from .models import Customer, Product, Order
+from .filters import CustomerFilter, ProductFilter, OrderFilter
 from django.core.exceptions import ValidationError
 from django.core.validators import EmailValidator
 import re
@@ -14,18 +16,21 @@ class CustomerType(DjangoObjectType):
     class Meta:
         model = Customer
         fields = '__all__'
+        interfaces = (graphene.relay.Node,)
 
 
 class ProductType(DjangoObjectType):
     class Meta:
         model = Product
         fields = '__all__'
+        interfaces = (graphene.relay.Node,)
 
 
 class OrderType(DjangoObjectType):
     class Meta:
         model = Order
         fields = '__all__'
+        interfaces = (graphene.relay.Node,)
 
 
 # Input Types for Mutations
@@ -198,20 +203,11 @@ class CreateOrder(graphene.Mutation):
         return CreateOrder(order=order)
 
 
-# Query
+# Query with Filtering
 class Query(graphene.ObjectType):
-    all_customers = graphene.List(CustomerType)
-    all_products = graphene.List(ProductType)
-    all_orders = graphene.List(OrderType)
-
-    def resolve_all_customers(self, info):
-        return Customer.objects.all()
-
-    def resolve_all_products(self, info):
-        return Product.objects.all()
-
-    def resolve_all_orders(self, info):
-        return Order.objects.all()
+    all_customers = DjangoFilterConnectionField(CustomerType, filterset_class=CustomerFilter)
+    all_products = DjangoFilterConnectionField(ProductType, filterset_class=ProductFilter)
+    all_orders = DjangoFilterConnectionField(OrderType, filterset_class=OrderFilter)
 
 
 # Mutation
