@@ -203,11 +203,44 @@ class CreateOrder(graphene.Mutation):
         return CreateOrder(order=order)
 
 
+class UpdateLowStockProducts(graphene.Mutation):
+    """
+    Mutation to update low-stock products (stock < 10).
+    Increments their stock by 10 (simulating restocking).
+    """
+    class Arguments:
+        pass
+    
+    products = graphene.List(ProductType)
+    message = graphene.String()
+    
+    def mutate(self, info):
+        # Query products with stock < 10
+        low_stock_products = Product.objects.filter(stock__lt=10)
+        
+        updated_products = []
+        
+        # Increment stock by 10 for each low-stock product
+        for product in low_stock_products:
+            product.stock += 10
+            product.save()
+            updated_products.append(product)
+        
+        count = len(updated_products)
+        message = f"Successfully updated {count} low-stock product(s)"
+        
+        return UpdateLowStockProducts(products=updated_products, message=message)
+
+
 # Query with Filtering
 class Query(graphene.ObjectType):
     all_customers = DjangoFilterConnectionField(CustomerType, filterset_class=CustomerFilter)
     all_products = DjangoFilterConnectionField(ProductType, filterset_class=ProductFilter)
     all_orders = DjangoFilterConnectionField(OrderType, filterset_class=OrderFilter)
+    hello = graphene.String()
+    
+    def resolve_hello(self, info):
+        return "Hello World!"
 
 
 # Mutation
@@ -216,3 +249,4 @@ class Mutation(graphene.ObjectType):
     bulk_create_customers = BulkCreateCustomers.Field()
     create_product = CreateProduct.Field()
     create_order = CreateOrder.Field()
+    update_low_stock_products = UpdateLowStockProducts.Field()
