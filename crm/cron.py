@@ -3,7 +3,8 @@ Cron jobs for the CRM application.
 """
 
 from datetime import datetime
-import requests
+from gql import gql, Client
+from gql.transport.requests import RequestsHTTPTransport
 
 
 def log_crm_heartbeat():
@@ -20,22 +21,30 @@ def log_crm_heartbeat():
     
     # Optional: Query GraphQL endpoint to verify it's responsive
     try:
-        response = requests.post(
-            'http://localhost:8000/graphql',
-            json={'query': '{ hello }'},
-            timeout=5
+        # Set up the GraphQL client
+        transport = RequestsHTTPTransport(
+            url='http://localhost:8000/graphql',
+            use_json=True,
         )
         
-        if response.status_code == 200:
-            data = response.json()
-            if 'data' in data and 'hello' in data['data']:
-                heartbeat_message += f" - GraphQL endpoint responsive: {data['data']['hello']}"
-            else:
-                heartbeat_message += " - GraphQL endpoint responded but no hello field"
+        client = Client(transport=transport, fetch_schema_from_transport=True)
+        
+        # Define the GraphQL query
+        query = gql("""
+            query {
+                hello
+            }
+        """)
+        
+        # Execute the query
+        result = client.execute(query)
+        
+        if 'hello' in result:
+            heartbeat_message += f" - GraphQL endpoint responsive: {result['hello']}"
         else:
-            heartbeat_message += f" - GraphQL endpoint returned status {response.status_code}"
+            heartbeat_message += " - GraphQL endpoint responded but no hello field"
     
-    except requests.exceptions.RequestException as e:
+    except Exception as e:
         heartbeat_message += f" - GraphQL endpoint unreachable: {str(e)}"
     
     # Append to log file (does not overwrite)
